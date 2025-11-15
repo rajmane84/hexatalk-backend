@@ -382,26 +382,35 @@ export const handleSendGroupMessage = async (
     readBy: [sender._id],
   });
 
-  const filteredMembers = groupExists.members.map(
-    (memberId) => memberId !== sender._id,
-  );
+  const filteredMembers = groupExists.members
+    .filter((id) => id.toString() !== sender._id.toString())
+    .map((id) => id.toString());
 
-  for (const memberId of filteredMembers) {
-    const memberSocket = users.get(memberId.toString());
-    if (memberSocket) {
-      memberSocket.send(
-        JSON.stringify({
-          type: 'GROUP_CHAT',
-          data: {
-            chatId: groupExists._id,
-            message: newMessage.message,
-            from: sender._id,
-            createdAt: newMessage.createdAt,
-          },
-        }),
-      );
-    }
-  }
+  // for (const memberId of filteredMembers) {
+  //   const memberSocket = users.get(memberId.toString());
+  //   if (memberSocket) {
+  //     memberSocket.send(
+  //       JSON.stringify({
+  //         type: 'GROUP_CHAT',
+  //         data: {
+  //           chatId: groupExists._id,
+  //           message: newMessage.message,
+  //           from: sender._id,
+  //           createdAt: newMessage.createdAt,
+  //         },
+  //       }),
+  //     );
+  //   }
+  // }
+
+  const data = {
+    chatId: groupExists._id,
+    message: newMessage.message,
+    from: sender._id,
+    createdAt: newMessage.createdAt,
+  };
+
+  broadcastToGroup(filteredMembers, data);
 
   ws.send(
     JSON.stringify({

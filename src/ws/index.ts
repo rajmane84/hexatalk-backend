@@ -9,9 +9,10 @@ export const initWebSocket = (serverPort: number) => {
   console.log(`✅ WebSocket server running on port ${serverPort}`);
 
   wss.on('connection', async (ws, req) => {
-    console.log(`${wss.clients.size} clients are connected to the WS Server`);
     const user = await authenticateConnection(ws, req);
     if (!user) return;
+
+    console.log(`${wss.clients.size} clients are connected to the WS Server`);
 
     const userId = user._id.toString();
     users.set(userId, ws);

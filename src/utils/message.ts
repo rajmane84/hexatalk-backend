@@ -1,7 +1,16 @@
 import { Types } from 'mongoose';
 import Message from '../schemas/message.schema';
 
-export const getUserStats = async (userId: string): Promise<null | any[]> => {
+interface IUserStats {
+  unreadCount: Number;
+  lastMessage: {
+    text: String;
+  };
+  friendId: Types.ObjectId;
+  username: String;
+}
+
+export const getUserStats = async (userId: string): Promise<null | IUserStats[]> => {
   try {
     const unreadCounts = await Message.aggregate([
       {

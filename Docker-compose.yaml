@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: always
+    ports:
+      - "6000:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  app:
+    build: .
+    container_name: ws-app
+    restart: always
+    ports:
+      - "8001:8001"
+      - "8080:8080"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/chat-app
+    depends_on:
+      - mongo
+
+volumes:
+  mongo_data:
