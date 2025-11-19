@@ -1,0 +1,47 @@
+## Build the docker code
+## Push the docker image to docker hub
+## SSH into our VM and start with the new image
+
+name: Continuous deployment (prod)
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/Checkout@v4
+
+      - name: Login to Docker hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: . 
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/hexatalk-backend:${{ github.sha }}
+
+      # - name: Deploy to the server
+      #   uses: appleboy/ssh-action@v1.2.0
+      #   with:
+      #     host: ${{ secrets.SERVER_HOST }}
+      #     username: ${{ secrets.SERVER_USER }}
+      #     key: ${{ secrets.SERVER_SSH_KEY }}
+      #   script: |
+      #       cd ~/hexatalk-backend
+
+      #       echo "Pulling latest code..."
+      #       git pull origin main
+
+      #       echo "Rebuilding containers..."
+      #       docker compose down
+      #       docker compose build --no-cache
+      #       docker compose up -d --remove-orphans
+
+      #       echo "Deployment complete!"
