@@ -288,8 +288,6 @@ export async function getAllFriends(req: Request, res: Response) {
       .select('friends')
       .populate('friends', 'username');
 
-    console.log('friends', friends);
-
     return res.status(200).json({ friends });
   } catch (error) {
     console.log(`Failed to fetch friends of ${req.user?.username}`);

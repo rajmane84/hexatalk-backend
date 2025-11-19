@@ -9,10 +9,21 @@ export async function handleUserSignup(req: Request, res: Response) {
 
   if (!result.success) {
     const error = JSON.stringify(result.error);
-    return res.status(400).json({ 'zod error': error });
+    return res.status(400).json({ message: `zod error: ${JSON.stringify(error)}`});
   }
 
   const { email, password, username } = result.data;
+  
+  //check the username is available or not
+  try {
+    const isUsernameAvailable = await User.findOne({username});
+    if(isUsernameAvailable){
+      return res.status(400).json({message: 'Username is already taken'})
+    }
+  } catch (error) {
+    console.log('failed to check if username is available or not', error);
+    return res.status(500).json({ message: 'Mongoose error' });
+  }
 
   let userExists;
 
@@ -28,7 +39,7 @@ export async function handleUserSignup(req: Request, res: Response) {
   if (userExists) {
     return res
       .status(400)
-      .json({ message: 'user with this email already exists' });
+      .json({ message: 'User with this email already exists' });
   }
 
   let user;
@@ -56,7 +67,7 @@ export async function handleUserLogin(req: Request, res: Response) {
 
   if (!result.success) {
     const error = JSON.stringify(result.error);
-    return res.status(400).json({ 'zod error': JSON.parse(error) });
+    return res.status(400).json({ message: `zod error: ${JSON.parse(error)}` });
   }
 
   const { email, password } = result.data;
@@ -69,13 +80,13 @@ export async function handleUserLogin(req: Request, res: Response) {
     }).select('+password');
   } catch (error) {
     console.log('failed to check if user exists or not', error);
-    return res.status(500).json('Mongoose error');
+    return res.status(500).json({ message: 'Mongoose error' });
   }
 
   if (!userExists) {
     return res
       .status(400)
-      .json({ error: 'user with this email does not exists' });
+      .json({ message: 'user with this email does not exists' });
   }
 
   const isPasswordValid = userExists.password === password;
@@ -96,8 +107,12 @@ export async function handleUserLogin(req: Request, res: Response) {
 
   return res
     .status(200)
-    .cookie('token', token)
-    .json({ message: 'Login successfull', token });
+    .cookie('token', token, {
+      httpOnly: true,
+      sameSite: "none", // since our backend is on 8001 and FE on 3000
+      secure: false
+    })
+    .json({ message: 'Login successfull', token, user: {email, username: userExists.username} });
 }
 
 export async function handleUserLogout(req: Request, res: Response) {

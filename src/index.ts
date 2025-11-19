@@ -21,7 +21,7 @@ const mongo_uri = 'mongodb://localhost:6000/HexaTalk';
 connectDB(process.env.MONGO_URI || mongo_uri);
 
 // starting ws server
-initWebSocket(8080);
+initWebSocket(8081);
 
 app.use(
   cors({
