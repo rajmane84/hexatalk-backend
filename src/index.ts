@@ -38,6 +38,10 @@ app.get('/test', (req, res) => {
   return res.send('Hey there!!');
 });
 
+app.get('/test-2', (req, res) => {
+  return res.send('Hey there from test 2!!');
+});
+
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/users', userRouter);
 app.use('/api/v1/messages', messageRouter);
