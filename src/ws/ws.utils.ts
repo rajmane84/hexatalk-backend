@@ -83,7 +83,7 @@ export const handleSendMessages = async (
 
   const { data: recipient } = result;
 
-  const isFriend = checkFriendship(sender, recipient);
+  const isFriend = await checkFriendship(sender, recipient);
 
   if (!isFriend) {
     ws.send(

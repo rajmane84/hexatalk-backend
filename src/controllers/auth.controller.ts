@@ -3,22 +3,24 @@ import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../schemas/user.schema';
 import BlacklistedToken from '../schemas/blacklist.schema';
+import { FormatErrors } from '../utils';
 
 export async function handleUserSignup(req: Request, res: Response) {
   const result = SignUpSchema.safeParse(req.body);
 
   if (!result.success) {
-    const error = JSON.stringify(result.error);
-    return res.status(400).json({ message: `zod error: ${JSON.stringify(error)}`});
+    return res
+      .status(400)
+      .json({ message: `zod error: ${FormatErrors(result.error)}` });
   }
 
-  const { email, password, username } = result.data;
-  
+  const { fullname, email, password, username } = result.data;
+
   //check the username is available or not
   try {
-    const isUsernameAvailable = await User.findOne({username});
-    if(isUsernameAvailable){
-      return res.status(400).json({message: 'Username is already taken'})
+    const isUsernameAvailable = await User.findOne({ username });
+    if (isUsernameAvailable) {
+      return res.status(400).json({ message: 'Username is already taken' });
     }
   } catch (error) {
     console.log('failed to check if username is available or not', error);
@@ -44,10 +46,10 @@ export async function handleUserSignup(req: Request, res: Response) {
 
   let user;
   // check if the username is available or not ( Try to use Bloom Filters )
-  // hash the password
 
   try {
     user = await User.create({
+      fullname,
       email,
       password,
       username,
@@ -57,17 +59,16 @@ export async function handleUserSignup(req: Request, res: Response) {
     return res.status(500).json({ message: 'Mongoose error' });
   }
 
-  return res
-    .status(201)
-    .json({ message: 'New user created successfully', user });
+  return res.status(201).json({ message: 'New user created successfully' });
 }
 
 export async function handleUserLogin(req: Request, res: Response) {
   const result = LoginSchema.safeParse(req.body);
 
   if (!result.success) {
-    const error = JSON.stringify(result.error);
-    return res.status(400).json({ message: `zod error: ${JSON.parse(error)}` });
+    return res
+      .status(400)
+      .json({ message: `zod error: ${FormatErrors(result.error)}` });
   }
 
   const { email, password } = result.data;
@@ -89,7 +90,7 @@ export async function handleUserLogin(req: Request, res: Response) {
       .json({ message: 'user with this email does not exists' });
   }
 
-  const isPasswordValid = userExists.password === password;
+  const isPasswordValid = userExists.comparePassword(password);
 
   if (!isPasswordValid) {
     return res.status(400).json({ message: 'Incorrect Password' });
@@ -109,10 +110,13 @@ export async function handleUserLogin(req: Request, res: Response) {
     .status(200)
     .cookie('token', token, {
       httpOnly: true,
-      sameSite: "none", // since our backend is on 8001 and FE on 3000
-      secure: false
+      sameSite: 'none', // since our backend is on 8001 and FE on 3000
+      secure: false,
     })
-    .json({ message: 'Login successfull', token, user: {email, username: userExists.username} });
+    .json({
+      message: 'Login successfull',
+      token,
+    });
 }
 
 export async function handleUserLogout(req: Request, res: Response) {
@@ -126,7 +130,6 @@ export async function handleUserLogout(req: Request, res: Response) {
     }
 
     const decodedToken = jwt.decode(token) as jwt.JwtPayload;
-    console.log(decodedToken);
 
     if (!decodedToken || !decodedToken.exp) {
       return res.status(400).json({ message: 'Invalid token' });

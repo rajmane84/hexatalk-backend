@@ -6,6 +6,7 @@ import { users } from '../ws/ws.utils';
 import mongoose, { Document, Types } from 'mongoose';
 import { IFriendRequest } from '../types/user.types';
 import { IUser } from '../schemas/user.schema';
+import Message from '../schemas/message.schema';
 
 export async function addNewFriend(req: Request, res: Response) {
   const result = addFriendSchema.safeParse(req.body);
@@ -71,7 +72,7 @@ export async function addNewFriend(req: Request, res: Response) {
       receiverSocket.send(
         JSON.stringify({
           type: 'FRIEND_REQUEST',
-          from: loggedInUserId,
+          from: req.user?.username,
         }),
       );
       console.log(`Sent friend request to ${receiver.username}`);
@@ -206,6 +207,16 @@ export async function acceptFriendRequest(req: Request, res: Response) {
     await session.commitTransaction();
     console.log('✅ New Friend added successfully');
 
+    const receiverSocket = users.get(requestExists.from.toString());
+    if (receiverSocket) {
+      receiverSocket.send(
+        JSON.stringify({
+          type: 'FRIEND_REQUEST_ACCEPTED',
+          message: `${req.user?.username} accepted your friend request`,
+        }),
+      );
+    }
+
     return res.status(200).json({
       message: `🎉 New friend added`,
     });
@@ -260,7 +271,7 @@ export async function getAllRequests(req: Request, res: Response) {
 
     const allRequests = await FriendRequest.find<IFriendRequest>({
       to: userId,
-    });
+    }).populate('from', 'username email').select('_id from status');
 
     if (allRequests.length === 0) {
       return res
@@ -268,9 +279,15 @@ export async function getAllRequests(req: Request, res: Response) {
         .json({ message: "You don't have any friend requests" });
     }
 
+    // const requests = allRequests.map(req => ({
+    //   _id: req._id,
+    //   from: req.from,
+    //   status: req.status
+    // }))
+
     return res.status(200).json({
       message: `you have ${allRequests.length} friend requests`,
-      allRequests,
+      requests: allRequests,
     });
   } catch (error) {
     console.log(error);
@@ -279,16 +296,42 @@ export async function getAllRequests(req: Request, res: Response) {
 }
 
 export async function getAllFriends(req: Request, res: Response) {
-  const userId = req.user?._id;
-
-  type UserFriendInfo = Pick<IUser, 'username'> & Document;
+  const loggedInUserId = req.user?._id;
 
   try {
-    const friends = await User.findById(userId)
-      .select('friends')
-      .populate('friends', 'username');
+    const currentUser = await User.findById(loggedInUserId).populate(
+      'friends',
+      'username email',
+    );
+    if (!currentUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    return res.status(200).json({ friends });
+    const friendsWithUnread = await Promise.all(
+      (currentUser.friends as any[]).map(async (friend) => {
+        if (!friend) return null;
+
+        const unreadCount = await Message.countDocuments({
+          from: friend._id,
+          to: loggedInUserId,
+          readBy: { $ne: loggedInUserId }, // "readBy array does NOT include me"
+        });
+
+        // Return a custom object merging friend details + unreadCount
+        return {
+          _id: friend._id,
+          username: friend.username,
+          email: friend.email,
+          unreadCount: unreadCount,
+        };
+      }),
+    );
+
+    const validFriends = friendsWithUnread.filter((frnd) => {
+      return frnd !== null && frnd.username !== req.user?.username;
+    });
+
+    return res.status(200).json({ friends: validFriends });
   } catch (error) {
     console.log(`Failed to fetch friends of ${req.user?.username}`);
     return res.status(500).json({ message: 'Internal server error' });
