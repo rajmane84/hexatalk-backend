@@ -1,0 +1,52 @@
+name: Code Quality & Fix
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use the branch name (ref) so we are not in a "detached HEAD" state
+          ref: ${{ github.head_ref || github.ref_name }} 
+
+      - name: Setup pnpm & Node
+        uses: pnpm/action-setup@v3
+        with: 
+          run_install: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Run BOTH fixes in the same session
+      - name: Fix Linting
+        run: pnpm run lint-fix
+
+      - name: Fix Prettier
+        run: pnpm run prettier
+
+      # Verify everything is actually clean now
+      - name: Final Check
+        run: |
+          pnpm run lint
+          pnpm run prettier-check
+
+      # Commit ALL changes at once
+      - name: Commit and Push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style: apply lint and prettier fixes"

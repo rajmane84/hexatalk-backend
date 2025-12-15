@@ -6,20 +6,19 @@ name: Continuous deployment (prod)
 
 on:
   workflow_run:
-    workflows: ['Prettier Check']
-    types:
-      - completed
+    workflows: ['Code Quality & Fix']
+    types: [completed]
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     steps:
-      - name: Checkout repository
+      - name: Checkout Latest Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          # ⚠️ IMPORTANT: Checkout the branch name, NOT the head_sha
+          ref: 'main'
 
       - name: Login to Docker hub
         uses: docker/login-action@v3
