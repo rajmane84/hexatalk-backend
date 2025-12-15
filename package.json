@@ -10,8 +10,8 @@
     "start": "node dist/index.js",
     "prettier": "pnpm exec prettier . --write",
     "prettier-check": "npx prettier . --check",
-    "lint": "npm eslint .",
-    "lint-fix": "npm eslint --fix ."
+    "lint": "npx eslint .",
+    "lint-fix": "npx eslint --fix ."
   },
   "keywords": [],
   "author": "",

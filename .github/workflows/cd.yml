@@ -6,7 +6,7 @@ name: Continuous deployment (prod)
 
 on:
   workflow_run:
-    workflows: ["Prettier Check"]
+    workflows: ['Prettier Check']
     types:
       - completed
 
