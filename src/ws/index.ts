@@ -1,7 +1,7 @@
 import { WebSocketServer } from 'ws';
 import { authenticateConnection } from './ws.auth';
 import { handleConnectionClose, handleMessage } from './ws.handlers';
-import { sendPendingRequests, updateLastMessage, users } from './ws.utils';
+import { sendPendingRequests, users } from './ws.utils';
 import { getUserStats } from '../utils/message';
 
 export const initWebSocket = (serverPort: number) => {

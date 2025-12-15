@@ -34,7 +34,7 @@ export async function validateUser(
 
   try {
     user = await User.findById(_id);
-  } catch (error) {
+  } catch (_error) {
     return res.status(500).json({ message: 'Unexpected error' });
   }
 

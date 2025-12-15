@@ -23,7 +23,11 @@ export async function handleMessage(
     const payload: IMessagePayload = JSON.parse(data.toString());
     const { to: recipientId, message, type } = payload;
 
-    if (type === 'SEND_MESSAGE' || type === 'RANDOM_CHAT' || type === 'GROUP_MESSAGE') {
+    if (
+      type === 'SEND_MESSAGE' ||
+      type === 'RANDOM_CHAT' ||
+      type === 'GROUP_MESSAGE'
+    ) {
       if (!message || message?.trim() === '') {
         ws.send(
           JSON.stringify({ type: 'ERROR', message: 'Message is required' }),
@@ -33,9 +37,9 @@ export async function handleMessage(
     }
 
     if (type === 'CREATE_GROUP_CHAT') {
-      let { name, members } = payload;
+      let { members } = payload;
 
-      if (!name || name.trim() === '') {
+      if (!payload.name || payload.name.trim() === '') {
         ws.send(
           JSON.stringify({ type: 'ERROR', message: 'Group Name is required' }),
         );
@@ -85,8 +89,8 @@ export async function handleMessage(
         );
         break;
     }
-  } catch (err: any) {
-    console.error('Message handling error:', err.message);
+  } catch (err: unknown) {
+    console.error('Message handling error:', (err as Error).message);
     ws.send(
       JSON.stringify({
         type: 'ERROR',

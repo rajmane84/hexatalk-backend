@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import User from '../schemas/user.schema';
 import { IUser } from '../schemas/user.schema';
 import Message, { IMessage } from '../schemas/message.schema';
 
-// We'll use this controller when the user open's a particular chat
 export const getAllMessagesForUser = async (req: Request, res: Response) => {
   const { friendId } = req.params;
 
@@ -13,7 +12,7 @@ export const getAllMessagesForUser = async (req: Request, res: Response) => {
   }
 
   const loggedInUser = req.user;
-  const cursor = req.query.cursor as string | undefined; // Message ID to start from
+  const cursor = req.query.cursor as string | undefined;
   const limit = parseInt(req.query.limit as string) || 20;
 
   try {
@@ -31,7 +30,7 @@ export const getAllMessagesForUser = async (req: Request, res: Response) => {
         .json({ message: `You are not friends with ${userExists.username}` });
     }
 
-    const query: any = {
+    const query: FilterQuery<IMessage> = {
       $or: [
         { from: loggedInUser?._id, to: friendId },
         { from: friendId, to: loggedInUser?._id },
@@ -48,13 +47,14 @@ export const getAllMessagesForUser = async (req: Request, res: Response) => {
 
     const hasMore = messages.length > limit;
     if (hasMore) {
-      messages.pop(); // Remove the extra message
+      messages.pop();
     }
 
-    const nextCursor =
-      messages.length > 0 ? JSON.stringify(messages[messages.length - 1]._id) : null;
+    const nextCursor: string | null =
+      messages.length > 0
+        ? (messages[messages.length - 1]._id as Types.ObjectId).toString()
+        : null;
 
-    // marking all messages as seen
     await Message.updateMany(
       {
         from: friendId,
@@ -64,21 +64,20 @@ export const getAllMessagesForUser = async (req: Request, res: Response) => {
       { $addToSet: { readBy: loggedInUser?._id } },
     );
 
-    // Usefull to show number of unread messages in the chat UI
     const unreadCount = await Message.countDocuments({
       from: friendId,
       to: loggedInUser?._id,
       readBy: { $ne: loggedInUser?._id },
     });
 
-     return res.status(200).json({
-       message: `Your messages with ${userExists.username} fetched successfully`,
-       messages: messages.reverse(), // Reverse to show oldest to newest
-       nextCursor,
-       hasMore,
-       limit,
-       unreadCount, // Number of messages that were just marked as read
-     });
+    return res.status(200).json({
+      message: `Your messages with ${userExists.username} fetched successfully`,
+      messages: messages.reverse(),
+      nextCursor,
+      hasMore,
+      limit,
+      unreadCount,
+    });
   } catch (error) {
     console.error('Some error occurred while fetching messages', error);
 

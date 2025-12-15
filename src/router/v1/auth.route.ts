@@ -1,5 +1,9 @@
 import { Router } from 'express';
-import { handleUserLogin, handleUserLogout, handleUserSignup } from '../../controllers/auth.controller';
+import {
+  handleUserLogin,
+  handleUserLogout,
+  handleUserSignup,
+} from '../../controllers/auth.controller';
 import { validateUser } from '../../middleware/auth.middleware';
 
 const authRouter = Router();

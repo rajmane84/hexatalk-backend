@@ -44,11 +44,10 @@ export async function handleUserSignup(req: Request, res: Response) {
       .json({ message: 'User with this email already exists' });
   }
 
-  let user;
   // check if the username is available or not ( Try to use Bloom Filters )
 
   try {
-    user = await User.create({
+    await User.create({
       fullname,
       email,
       password,
@@ -117,7 +116,7 @@ export async function handleUserLogin(req: Request, res: Response) {
     .json({
       message: 'Login successfull',
       token,
-      user: payload
+      user: payload,
     });
 }
 

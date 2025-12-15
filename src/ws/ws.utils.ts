@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import FriendRequest from '../schemas/friendRequest.schema';
-import Message, { IMessage } from '../schemas/message.schema';
+import Message from '../schemas/message.schema';
 import Chat, { IChat } from '../schemas/chat.schema';
 import User, { IUser } from '../schemas/user.schema';
 import { Types } from 'mongoose';
@@ -11,7 +11,7 @@ export const users = new Map<string, WebSocket>();
 export const waitingUsers: Map<string, WebSocket> = new Map();
 export const randomPairs: Map<string, string> = new Map(); // key: userId, value: partnerId
 
-export const sendToUser = (userId: string, data: any) => {
+export const sendToUser = (userId: string, data: unknown) => {
   if (users.has(userId)) {
     const ws = users.get(userId);
     ws?.send(JSON.stringify(data));
@@ -19,7 +19,7 @@ export const sendToUser = (userId: string, data: any) => {
 };
 
 // This is for group chat
-export const broadcastToGroup = (groupMembers: string[], data: any) => {
+export const broadcastToGroup = (groupMembers: string[], data: unknown) => {
   groupMembers.forEach((id) => sendToUser(id, data));
 };
 
@@ -184,8 +184,11 @@ export const handleReadMessages = async (
         }),
       );
     }
-  } catch (err: any) {
-    console.error('Error handling read messages:', err.message || err);
+  } catch (err: unknown) {
+    console.error(
+      'Error handling read messages:',
+      (err as Error).message || err,
+    );
     ws.send(
       JSON.stringify({
         type: 'ERROR',
@@ -304,7 +307,7 @@ export const handleCreateNewGroupChat = async (
   const senderFriends: string[] = sender.friends.map((id: Types.ObjectId) =>
     id.toString(),
   );
-  const memberIds: string[] = members.map((id: any) => id.toString());
+  const memberIds: string[] = members.map((id) => id.toString());
 
   const filteredMembers = memberIds.filter(
     (id) => id !== sender._id.toString(),

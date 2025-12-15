@@ -3,7 +3,7 @@ import User from '../schemas/user.schema';
 import { addFriendSchema, removeFriendSchema } from '../zod/user.schema';
 import FriendRequest from '../schemas/friendRequest.schema';
 import { users } from '../ws/ws.utils';
-import mongoose, { Document, Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { IFriendRequest } from '../types/user.types';
 import { IUser } from '../schemas/user.schema';
 import Message from '../schemas/message.schema';
@@ -293,6 +293,13 @@ export async function getAllRequests(req: Request, res: Response) {
   }
 }
 
+interface IPopulatedFriend {
+  _id: Types.ObjectId;
+  username: string;
+  email: string;
+  fullname: string;
+}
+
 export async function getAllFriends(req: Request, res: Response) {
   const loggedInUserId = req.user?._id;
 
@@ -301,21 +308,24 @@ export async function getAllFriends(req: Request, res: Response) {
       'friends',
       'username email fullname',
     );
+
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    const populatedFriends =
+      currentUser.friends as unknown as IPopulatedFriend[];
+
     const friendsWithUnread = await Promise.all(
-      (currentUser.friends as any[]).map(async (friend) => {
+      populatedFriends.map(async (friend) => {
         if (!friend) return null;
 
         const unreadCount = await Message.countDocuments({
           from: friend._id,
           to: loggedInUserId,
-          readBy: { $ne: loggedInUserId }, // "readBy array does NOT include me"
+          readBy: { $ne: loggedInUserId },
         });
 
-        // Return a custom object merging friend details + unreadCount
         return {
           _id: friend._id,
           username: friend.username,
@@ -331,13 +341,12 @@ export async function getAllFriends(req: Request, res: Response) {
     });
 
     return res.status(200).json({ friends: validFriends });
-  } catch (error) {
+  } catch (_error) {
     console.log(`Failed to fetch friends of ${req.user?.username}`);
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
-
-export async function handleUpdateUser(req: Request, res: Response) {
+export async function handleUpdateUser(_req: Request, _res: Response) {
   //
 }
 

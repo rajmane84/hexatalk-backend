@@ -25,7 +25,7 @@ export async function checkFriendship(
   recipient: IUser,
 ): Promise<boolean> {
   const isFriend = sender.friends.some(
-    (friendId: any) => friendId.toString() === recipient._id.toString(),
+    (friendId) => friendId.toString() === recipient._id.toString(),
   );
 
   if (!isFriend) {

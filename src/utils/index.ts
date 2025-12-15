@@ -1,4 +1,4 @@
-import { ZodError } from "zod";
+import { ZodError } from 'zod';
 
 export function TitleCase(str: string) {
   return str
@@ -9,5 +9,5 @@ export function TitleCase(str: string) {
 }
 
 export function FormatErrors(error: ZodError) {
-    return JSON.stringify(error.issues)
+  return JSON.stringify(error.issues);
 }

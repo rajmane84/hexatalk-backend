@@ -2,15 +2,17 @@ import { Types } from 'mongoose';
 import Message from '../schemas/message.schema';
 
 interface IUserStats {
-  unreadCount: Number;
+  unreadCount: number;
   lastMessage: {
-    text: String;
+    text: string;
   };
   friendId: Types.ObjectId;
-  username: String;
+  username: string;
 }
 
-export const getUserStats = async (userId: string): Promise<null | IUserStats[]> => {
+export const getUserStats = async (
+  userId: string,
+): Promise<null | IUserStats[]> => {
   try {
     const unreadCounts = await Message.aggregate([
       {
@@ -53,7 +55,7 @@ export const getUserStats = async (userId: string): Promise<null | IUserStats[]>
     ]);
 
     return unreadCounts;
-  } catch (error) {
+  } catch (_error) {
     console.log('Error occured while fetching the count of unread messages');
     return null;
   }

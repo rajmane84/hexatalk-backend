@@ -32,11 +32,11 @@ app.use(express.json());
 app.use(express.urlencoded());
 app.use(cookieParser());
 
-app.get('/test', (req, res) => {
+app.get('/test', (_req, res) => {
   return res.send('Hey there!!');
 });
 
-app.get('/test-2', (req, res) => {
+app.get('/test-2', (_req, res) => {
   return res.send('Hey there from test 2!!');
 });
 

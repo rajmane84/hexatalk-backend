@@ -54,8 +54,10 @@ export async function authenticateConnection(
     }
 
     return user;
-  } catch (error: any) {
-    ws.send(JSON.stringify({ type: 'ERROR', message: error.message }));
+  } catch (error: unknown) {
+    ws.send(
+      JSON.stringify({ type: 'ERROR', message: (error as Error).message }),
+    );
     ws.close();
     return null;
   }

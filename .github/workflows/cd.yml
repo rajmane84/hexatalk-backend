@@ -3,15 +3,23 @@
 ## SSH into our VM and start with the new image
 
 name: Continuous deployment (prod)
+
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: ["Prettier Check"]
+    types:
+      - completed
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
     steps:
       - name: Checkout repository
-        uses: actions/Checkout@v4
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Login to Docker hub
         uses: docker/login-action@v3
@@ -22,10 +30,10 @@ jobs:
       - name: Build and push the image
         uses: docker/build-push-action@v6
         with:
-          context: . 
+          context: .
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/hexatalk-backend:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/hexatalk-backend:${{ github.event.workflow_run.head_sha }}
 
       # - name: Deploy to the server
       #   uses: appleboy/ssh-action@v1.2.0
