@@ -66,6 +66,7 @@ export async function handleUserLogin(req: Request, res: Response) {
   const result = LoginSchema.safeParse(req.body);
 
   if (!result.success) {
+    console.log(result.error);
     return res
       .status(400)
       .json({ message: `zod error: ${FormatErrors(result.error)}` });
@@ -116,6 +117,7 @@ export async function handleUserLogin(req: Request, res: Response) {
     .json({
       message: 'Login successfull',
       token,
+      user: payload
     });
 }
 

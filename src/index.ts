@@ -9,9 +9,7 @@ import { initWebSocket } from './ws';
 dotenv.config();
 
 // import routers
-import authRouter from './router/auth.route';
-import userRouter from './router/user.route';
-import messageRouter from './router/message.route';
+import V1Router from './router/v1/route';
 
 const app = express();
 const PORT = process.env.PORT || 8001;
@@ -42,9 +40,7 @@ app.get('/test-2', (req, res) => {
   return res.send('Hey there from test 2!!');
 });
 
-app.use('/api/v1/auth', authRouter);
-app.use('/api/v1/users', userRouter);
-app.use('/api/v1/messages', messageRouter);
+app.use('/api/v1', V1Router);
 
 app.listen(PORT, () => {
   console.log(`✅ HTTP Server running on PORT ${PORT}`);

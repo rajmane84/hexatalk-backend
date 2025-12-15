@@ -23,9 +23,7 @@ export const getAllMessagesForUser = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'No such user exists' });
     }
 
-    const areFriends = userExists.friends.some(
-      (f: Types.ObjectId) => f.toString() === friendId.toString(),
-    );
+    const areFriends = userExists._id.toString() === friendId;
 
     if (!areFriends) {
       return res

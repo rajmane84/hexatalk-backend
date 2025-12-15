@@ -7,6 +7,8 @@ import mongoose, { Document, Types } from 'mongoose';
 import { IFriendRequest } from '../types/user.types';
 import { IUser } from '../schemas/user.schema';
 import Message from '../schemas/message.schema';
+import { uploadOnCloudinary } from '../utils/cloudinary';
+import fs from 'fs';
 
 export async function addNewFriend(req: Request, res: Response) {
   const result = addFriendSchema.safeParse(req.body);
@@ -271,19 +273,15 @@ export async function getAllRequests(req: Request, res: Response) {
 
     const allRequests = await FriendRequest.find<IFriendRequest>({
       to: userId,
-    }).populate('from', 'username email').select('_id from status');
+    })
+      .populate('from', 'username email fullname')
+      .select('_id from status');
 
     if (allRequests.length === 0) {
       return res
         .status(200)
         .json({ message: "You don't have any friend requests" });
     }
-
-    // const requests = allRequests.map(req => ({
-    //   _id: req._id,
-    //   from: req.from,
-    //   status: req.status
-    // }))
 
     return res.status(200).json({
       message: `you have ${allRequests.length} friend requests`,
@@ -301,7 +299,7 @@ export async function getAllFriends(req: Request, res: Response) {
   try {
     const currentUser = await User.findById(loggedInUserId).populate(
       'friends',
-      'username email',
+      'username email fullname',
     );
     if (!currentUser) {
       return res.status(404).json({ message: 'User not found' });
@@ -322,6 +320,7 @@ export async function getAllFriends(req: Request, res: Response) {
           _id: friend._id,
           username: friend.username,
           email: friend.email,
+          fullname: friend.fullname,
           unreadCount: unreadCount,
         };
       }),
@@ -335,5 +334,48 @@ export async function getAllFriends(req: Request, res: Response) {
   } catch (error) {
     console.log(`Failed to fetch friends of ${req.user?.username}`);
     return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+export async function handleUpdateUser(req: Request, res: Response) {
+  //
+}
+
+export async function handleUpdateAvatar(req: Request, res: Response) {
+  try {
+    const localFilePath = req.file?.path;
+    const loggedInUserId = req.user?._id;
+
+    if (!localFilePath) {
+      return res.status(400).json({
+        message: 'Avatar file is missing',
+      });
+    }
+
+    const cloudinaryResponse = await uploadOnCloudinary(localFilePath);
+
+    if (!cloudinaryResponse) {
+      return res.status(500).json({
+        message: 'Error uploading avatar to cloud',
+      });
+    }
+
+    await User.findByIdAndUpdate(loggedInUserId, {
+      $set: { avatarurl: cloudinaryResponse },
+    });
+
+    return res.status(200).json({
+      message: 'Avatar updated successfully',
+      data: cloudinaryResponse.url,
+    });
+  } catch (error) {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    return res.status(500).json({
+      message: 'Internal Server Error',
+      error: (error as Error).message,
+    });
   }
 }
