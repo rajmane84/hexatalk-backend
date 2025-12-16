@@ -47,6 +47,6 @@ jobs:
 
       # Commit ALL changes at once
       - name: Commit and Push changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: rajmane84/git-auto-commit-action@v5
         with:
           commit_message: "style: apply lint and prettier fixes"
