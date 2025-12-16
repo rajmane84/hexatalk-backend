@@ -1,4 +1,12 @@
-# Ignore artifacts:
+# Build artifacts
 build
 coverage
+
+# CI & GitHub config (important)
 .github/
+
+# Lockfiles
+pnpm-lock.yaml
+
+# Prettier config files
+.prettierignore
