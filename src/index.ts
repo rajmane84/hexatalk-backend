@@ -25,20 +25,12 @@ app.use(
   cors({
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true,
-    origin: process.env.CORS_ORIGIN!,
+    origin: process.env.CORS_ORIGIN! || 'http://localhost:5173',
   }),
 );
 app.use(express.json());
 app.use(express.urlencoded());
 app.use(cookieParser());
-
-app.get('/test', (_req, res) => {
-  return res.send('Hey there!!');
-});
-
-app.get('/test-2', (_req, res) => {
-  return res.send('Hey there from test 2!!');
-});
 
 app.use('/api/v1', V1Router);
 

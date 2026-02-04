@@ -4,14 +4,19 @@ import jwt from 'jsonwebtoken';
 import User from '../schemas/user.schema';
 import BlacklistedToken from '../schemas/blacklist.schema';
 import { FormatErrors } from '../utils';
+import { sendErrorResponse } from '../utils/error-response';
+import { sendSuccessResponse } from '../utils/sucess-response';
+import { COOKIE_OPTION } from '../constants';
 
 export async function handleUserSignup(req: Request, res: Response) {
   const result = SignUpSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res
-      .status(400)
-      .json({ message: `zod error: ${FormatErrors(result.error)}` });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: `zod error: ${FormatErrors(result.error)}`,
+    });
   }
 
   const { fullname, email, password, username } = result.data;
@@ -20,11 +25,19 @@ export async function handleUserSignup(req: Request, res: Response) {
   try {
     const isUsernameAvailable = await User.findOne({ username });
     if (isUsernameAvailable) {
-      return res.status(400).json({ message: 'Username is already taken' });
+      return sendErrorResponse({
+        res,
+        statusCode: 400,
+        message: 'Username is already taken',
+      });
     }
   } catch (error) {
     console.log('failed to check if username is available or not', error);
-    return res.status(500).json({ message: 'Mongoose error' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Mongoose error',
+    });
   }
 
   let userExists;
@@ -35,19 +48,26 @@ export async function handleUserSignup(req: Request, res: Response) {
     });
   } catch (error) {
     console.log('failed to check if user exists or not', error);
-    return res.status(500).json({ message: 'Mongoose error' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Mongoose error',
+    });
   }
 
   if (userExists) {
-    return res
-      .status(400)
-      .json({ message: 'User with this email already exists' });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: 'User with this email already exists',
+    });
   }
 
   // check if the username is available or not ( Try to use Bloom Filters )
 
+  let newUser;
   try {
-    await User.create({
+    newUser = await User.create({
       fullname,
       email,
       password,
@@ -55,10 +75,36 @@ export async function handleUserSignup(req: Request, res: Response) {
     });
   } catch (error) {
     console.log('failed to create new user', error);
-    return res.status(500).json({ message: 'Mongoose error' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Mongoose error',
+    });
   }
 
-  return res.status(201).json({ message: 'New user created successfully' });
+  const payload = {
+    _id: newUser._id,
+    email,
+    username: newUser.username,
+  };
+
+  const token = jwt.sign(payload, process.env.TOKEN_SECRET!, {
+    expiresIn: '1d',
+  });
+
+  return sendSuccessResponse({
+    res,
+    statusCode: 201,
+    message: 'New user created successfully',
+    data: { token, payload },
+    cookies: [
+      {
+        name: 'token',
+        value: token,
+        options: COOKIE_OPTION,
+      },
+    ],
+  });
 }
 
 export async function handleUserLogin(req: Request, res: Response) {
@@ -66,9 +112,11 @@ export async function handleUserLogin(req: Request, res: Response) {
 
   if (!result.success) {
     console.log(result.error);
-    return res
-      .status(400)
-      .json({ message: `zod error: ${FormatErrors(result.error)}` });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: `zod error: ${FormatErrors(result.error)}`,
+    });
   }
 
   const { email, password } = result.data;
@@ -81,19 +129,29 @@ export async function handleUserLogin(req: Request, res: Response) {
     }).select('+password');
   } catch (error) {
     console.log('failed to check if user exists or not', error);
-    return res.status(500).json({ message: 'Mongoose error' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Mongoose error',
+    });
   }
 
   if (!userExists) {
-    return res
-      .status(400)
-      .json({ message: 'user with this email does not exists' });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: 'User with this email does not exist',
+    });
   }
 
   const isPasswordValid = userExists.comparePassword(password);
 
   if (!isPasswordValid) {
-    return res.status(400).json({ message: 'Incorrect Password' });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: 'Incorrect password',
+    });
   }
 
   const payload = {
@@ -106,18 +164,19 @@ export async function handleUserLogin(req: Request, res: Response) {
     expiresIn: '1d',
   });
 
-  return res
-    .status(200)
-    .cookie('token', token, {
-      httpOnly: true,
-      sameSite: 'none', // since our backend is on 8001 and FE on 3000
-      secure: false,
-    })
-    .json({
-      message: 'Login successfull',
-      token,
-      user: payload,
-    });
+  return sendSuccessResponse({
+    res,
+    statusCode: 200,
+    message: 'Login successfull',
+    data: { token, payload },
+    cookies: [
+      {
+        name: 'token',
+        value: token,
+        options: COOKIE_OPTION,
+      },
+    ],
+  });
 }
 
 export async function handleUserLogout(req: Request, res: Response) {
@@ -127,13 +186,21 @@ export async function handleUserLogout(req: Request, res: Response) {
       (req.headers.authorization && req.headers.authorization.split(' ')[1]);
 
     if (!token) {
-      return res.status(400).json({ message: 'No token found' });
+      return sendErrorResponse({
+        res,
+        statusCode: 400,
+        message: 'No token found',
+      });
     }
 
     const decodedToken = jwt.decode(token) as jwt.JwtPayload;
 
     if (!decodedToken || !decodedToken.exp) {
-      return res.status(400).json({ message: 'Invalid token' });
+      return sendErrorResponse({
+        res,
+        statusCode: 400,
+        message: 'Invalid token',
+      });
     }
 
     await BlacklistedToken.create({
@@ -143,12 +210,18 @@ export async function handleUserLogout(req: Request, res: Response) {
 
     res.clearCookie('token');
 
-    res.status(200).json({
+    return sendSuccessResponse({
+      res,
+      statusCode: 200,
       message: 'Logged out successfully. Please clear token from localStorage.',
-      clearLocalStorage: true,
+      data: { clearLocalStorage: true },
     });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Logout failed' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Logout failed',
+    });
   }
 }
