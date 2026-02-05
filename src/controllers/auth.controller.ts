@@ -86,6 +86,7 @@ export async function handleUserSignup(req: Request, res: Response) {
     _id: newUser._id,
     email,
     username: newUser.username,
+    avatarUrl: newUser.avatarUrl,
   };
 
   const token = jwt.sign(payload, process.env.TOKEN_SECRET!, {
@@ -158,6 +159,7 @@ export async function handleUserLogin(req: Request, res: Response) {
     _id: userExists._id,
     email,
     username: userExists.username,
+    avatarUrl: userExists.avatarUrl,
   };
 
   const token = jwt.sign(payload, process.env.TOKEN_SECRET!, {

@@ -9,6 +9,8 @@ import { IUser } from '../schemas/user.schema';
 import Message from '../schemas/message.schema';
 import { uploadOnCloudinary } from '../utils/cloudinary';
 import fs from 'fs';
+import { sendErrorResponse } from '../utils/error-response';
+import { sendSuccessResponse } from '../utils/sucess-response';
 
 export async function addNewFriend(req: Request, res: Response) {
   const result = addFriendSchema.safeParse(req.body);
@@ -169,7 +171,11 @@ export async function acceptFriendRequest(req: Request, res: Response) {
   const { requestId } = req.params;
 
   if (!requestId || !Types.ObjectId.isValid(requestId)) {
-    return res.status(400).json({ message: 'Please enter a valid request id' });
+    return sendErrorResponse({
+      res,
+      statusCode: 400,
+      message: 'Please enter a valid request id',
+    });
   }
 
   const session = await mongoose.startSession();
@@ -180,8 +186,10 @@ export async function acceptFriendRequest(req: Request, res: Response) {
       await FriendRequest.findById<IFriendRequest>(requestId);
 
     if (!requestExists) {
-      return res.status(404).json({
-        message: 'No such request exists!! May be it is already accepted',
+      return sendErrorResponse({
+        res,
+        statusCode: 404,
+        message: 'No such request exists!! Maybe it is already accepted',
       });
     }
 
@@ -219,16 +227,18 @@ export async function acceptFriendRequest(req: Request, res: Response) {
       );
     }
 
-    return res.status(200).json({
-      message: `🎉 New friend added`,
+    return sendSuccessResponse({
+      res,
+      message: '🎉 New friend added',
     });
   } catch (error) {
     await session.abortTransaction();
     console.error('❌ Transaction failed:', error);
 
-    return res.status(500).json({
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
       message: 'Something went wrong while accepting request',
-      error: error instanceof Error ? error.message : error,
     });
   } finally {
     session.endSession();
@@ -240,17 +250,21 @@ export async function rejectFriendRequest(req: Request, res: Response) {
     const { requestId } = req.params;
 
     if (!requestId || !Types.ObjectId.isValid(requestId)) {
-      return res
-        .status(400)
-        .json({ message: 'Please enter a valid request id' });
+      return sendErrorResponse({
+        res,
+        statusCode: 400,
+        message: 'Please enter a valid request id',
+      });
     }
 
     const requestExists =
       await FriendRequest.findById<IFriendRequest>(requestId);
 
     if (!requestExists) {
-      return res.status(404).json({
-        message: 'No such request exists!! May be it is already accepted',
+      return sendErrorResponse({
+        res,
+        statusCode: 404,
+        message: 'No such request exists!! Maybe it is already accepted',
       });
     }
 
@@ -258,12 +272,18 @@ export async function rejectFriendRequest(req: Request, res: Response) {
       status: 'REJECTED',
     });
 
-    return res.status(200).json({
-      message: `Friend request rejected successfully`,
+    return sendSuccessResponse({
+      res,
+      message: 'Friend request rejected successfully',
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: 'Internal server error' });
+
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Internal server error',
+    });
   }
 }
 
@@ -277,19 +297,18 @@ export async function getAllRequests(req: Request, res: Response) {
       .populate('from', 'username email fullname')
       .select('_id from status');
 
-    if (allRequests.length === 0) {
-      return res
-        .status(200)
-        .json({ message: "You don't have any friend requests" });
-    }
-
-    return res.status(200).json({
-      message: `you have ${allRequests.length} friend requests`,
-      requests: allRequests,
+    return sendSuccessResponse({
+      res,
+      message: `You have ${allRequests.length} friend requests`,
+      data: { requests: allRequests },
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Internal server error',
+    });
   }
 }
 
@@ -310,7 +329,11 @@ export async function getAllFriends(req: Request, res: Response) {
     );
 
     if (!currentUser) {
-      return res.status(404).json({ message: 'User not found' });
+      return sendErrorResponse({
+        res,
+        statusCode: 404,
+        message: 'User not found',
+      });
     }
 
     const populatedFriends =
@@ -340,12 +363,21 @@ export async function getAllFriends(req: Request, res: Response) {
       return frnd !== null && frnd.username !== req.user?.username;
     });
 
-    return res.status(200).json({ friends: validFriends });
-  } catch (_error) {
-    console.log(`Failed to fetch friends of ${req.user?.username}`);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendSuccessResponse({
+      res,
+      data: { friends: validFriends },
+      message: 'Friends fetched successfully',
+    });
+  } catch (error) {
+    console.log(`Failed to fetch friends of ${req.user?.username}`, error);
+    return sendErrorResponse({
+      res,
+      statusCode: 500,
+      message: 'Internal server error',
+    });
   }
 }
+
 export async function handleUpdateUser(_req: Request, _res: Response) {
   //
 }
@@ -385,6 +417,32 @@ export async function handleUpdateAvatar(req: Request, res: Response) {
     return res.status(500).json({
       message: 'Internal Server Error',
       error: (error as Error).message,
+    });
+  }
+}
+
+export async function handleGetAllUsers(req: Request, res: Response) {
+  const userId = req.user!._id;
+  try {
+    const users = await User.find()
+      .select('_id fullname username avatarUrl')
+      .lean();
+
+    const filteredUsers = users.filter(
+      (user) => user._id.toString() !== userId.toString(),
+    );
+
+    return sendSuccessResponse({
+      res,
+      message: 'Users fetched successfully',
+      data: filteredUsers,
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+
+    return sendErrorResponse({
+      res,
+      message: 'Failed to fetch users',
     });
   }
 }

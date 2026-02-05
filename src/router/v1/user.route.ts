@@ -4,6 +4,7 @@ import {
   addNewFriend,
   getAllFriends,
   getAllRequests,
+  handleGetAllUsers,
   handleUpdateAvatar,
   handleUpdateUser,
   rejectFriendRequest,
@@ -17,6 +18,7 @@ const userRouter = Router();
 userRouter.use(validateUser);
 
 userRouter.get('/all-requests', getAllRequests);
+userRouter.get('/all', handleGetAllUsers);
 userRouter.get('/accept-request/:requestId', acceptFriendRequest);
 userRouter.get('/reject-request/:requestId', rejectFriendRequest);
 userRouter.get('/friends', getAllFriends);
